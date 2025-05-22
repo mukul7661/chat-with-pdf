@@ -14,6 +14,7 @@ interface Doc {
       pageNumber?: number;
     };
     source?: string;
+    originalFilename?: string;
   };
   id?: string;
 }
@@ -268,7 +269,8 @@ const ChatComponent: React.FC = () => {
                         <div className="flex items-center text-slate-600 mb-1">
                           <File size={12} className="mr-1" />
                           <span className="truncate">
-                            {doc.metadata?.source?.split("/").pop() ||
+                            {doc.metadata?.originalFilename ||
+                              doc.metadata?.source?.split("/").pop() ||
                               "Document"}
                             {doc.metadata?.loc?.pageNumber &&
                               ` (Page ${doc.metadata.loc.pageNumber})`}

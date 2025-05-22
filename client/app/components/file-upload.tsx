@@ -1,27 +1,35 @@
 "use client";
 import * as React from "react";
-import { Upload, FileText, Check, AlertCircle } from "lucide-react";
+import { Upload, FileText, Check, AlertCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const FileUploadComponent: React.FC = () => {
-  const [isUploading, setIsUploading] = React.useState(false);
-  const [uploadStatus, setUploadStatus] = React.useState<
-    "idle" | "success" | "error"
-  >("idle");
-  const [fileName, setFileName] = React.useState<string | null>(null);
+interface FileStatus {
+  name: string;
+  status: "uploading" | "success" | "error";
+}
 
-  const handleFileUpload = async (file: File) => {
-    if (!file) return;
+const FileUploadComponent: React.FC = () => {
+  const [fileStatuses, setFileStatuses] = React.useState<FileStatus[]>([]);
+
+  const handleFileUpload = async (files: FileList) => {
+    if (files.length === 0) return;
+
+    const newFiles = Array.from(files).map((file) => ({
+      name: file.name,
+      status: "uploading" as const,
+    }));
+
+    setFileStatuses((prev) => [...prev, ...newFiles]);
 
     try {
-      setIsUploading(true);
-      setFileName(file.name);
-      setUploadStatus("idle");
-
       const formData = new FormData();
-      formData.append("pdf", file);
 
-      const response = await fetch("http://localhost:8000/upload/pdf", {
+      // Append all files to the formData with the key 'pdfs'
+      Array.from(files).forEach((file) => {
+        formData.append("pdfs", file);
+      });
+
+      const response = await fetch("http://localhost:8000/upload/pdfs", {
         method: "POST",
         body: formData,
       });
@@ -30,13 +38,27 @@ const FileUploadComponent: React.FC = () => {
         throw new Error("Upload failed");
       }
 
-      setUploadStatus("success");
-      console.log("File uploaded successfully");
+      // Mark all files as successfully uploaded
+      setFileStatuses((current) =>
+        current.map((f) =>
+          Array.from(files).some((file) => file.name === f.name)
+            ? { ...f, status: "success" as const }
+            : f
+        )
+      );
+
+      console.log(`${files.length} files uploaded successfully`);
     } catch (error) {
-      console.error("Error uploading file:", error);
-      setUploadStatus("error");
-    } finally {
-      setIsUploading(false);
+      console.error(`Error uploading files:`, error);
+
+      // Mark all files as failed
+      setFileStatuses((current) =>
+        current.map((f) =>
+          Array.from(files).some((file) => file.name === f.name)
+            ? { ...f, status: "error" as const }
+            : f
+        )
+      );
     }
   };
 
@@ -44,12 +66,10 @@ const FileUploadComponent: React.FC = () => {
     const el = document.createElement("input");
     el.setAttribute("type", "file");
     el.setAttribute("accept", "application/pdf");
+    el.setAttribute("multiple", "true");
     el.addEventListener("change", async (ev) => {
       if (el.files && el.files.length > 0) {
-        const file = el.files.item(0);
-        if (file) {
-          await handleFileUpload(file);
-        }
+        await handleFileUpload(el.files);
       }
     });
     el.click();
@@ -59,9 +79,12 @@ const FileUploadComponent: React.FC = () => {
     e.preventDefault();
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      if (file.type === "application/pdf") {
-        await handleFileUpload(file);
+      const pdfFiles = Array.from(e.dataTransfer.files).filter(
+        (file) => file.type === "application/pdf"
+      );
+
+      if (pdfFiles.length > 0) {
+        await handleFileUpload(e.dataTransfer.files);
       }
     }
   };
@@ -70,94 +93,92 @@ const FileUploadComponent: React.FC = () => {
     e.preventDefault();
   };
 
+  const removeFile = (fileName: string) => {
+    setFileStatuses((current) => current.filter((f) => f.name !== fileName));
+  };
+
   return (
     <div className="flex flex-col items-center w-full max-w-md">
       <div className="w-full">
         <h2 className="text-2xl font-bold text-slate-800 mb-2">PDF Chat</h2>
         <p className="text-slate-600 mb-6">
-          Upload a PDF document to start chatting with its contents
+          Upload PDF documents to start chatting with their contents
         </p>
 
         <div
           className={`
             border-2 border-dashed rounded-lg p-8 mb-4 transition-all
             flex flex-col items-center justify-center
-            ${
-              isUploading
-                ? "bg-slate-100 border-slate-300"
-                : "hover:bg-slate-50 border-slate-300"
-            }
-            ${uploadStatus === "success" ? "bg-green-50 border-green-300" : ""}
-            ${uploadStatus === "error" ? "bg-red-50 border-red-300" : ""}
+            hover:bg-slate-50 border-slate-300
           `}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onClick={handleFileUploadButtonClick}
         >
-          {isUploading ? (
-            <div className="flex flex-col items-center py-4">
-              <div className="animate-pulse mb-2">
-                <FileText size={48} className="text-slate-400" />
-              </div>
-              <p className="text-slate-600 font-medium">
-                Uploading {fileName}...
-              </p>
+          <div className="flex flex-col items-center py-6">
+            <div className="bg-slate-100 rounded-full p-4 mb-4">
+              <Upload size={32} className="text-slate-600" />
             </div>
-          ) : uploadStatus === "success" ? (
-            <div className="flex flex-col items-center py-4">
-              <div className="mb-3 text-green-500">
-                <Check size={48} />
-              </div>
-              <p className="text-slate-700 font-medium">{fileName}</p>
-              <p className="text-green-600 text-sm mt-1">
-                Successfully uploaded
-              </p>
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleFileUploadButtonClick();
-                }}
-                className="mt-4 bg-slate-200 hover:bg-slate-300 text-slate-800"
-                variant="outline"
-              >
-                Upload another PDF
-              </Button>
-            </div>
-          ) : uploadStatus === "error" ? (
-            <div className="flex flex-col items-center py-4">
-              <div className="mb-3 text-red-500">
-                <AlertCircle size={48} />
-              </div>
-              <p className="text-slate-700 font-medium">{fileName}</p>
-              <p className="text-red-600 text-sm mt-1">
-                Upload failed. Please try again.
-              </p>
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleFileUploadButtonClick();
-                }}
-                className="mt-4 bg-slate-200 hover:bg-slate-300 text-slate-800"
-                variant="outline"
-              >
-                Try again
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center py-6">
-              <div className="bg-slate-100 rounded-full p-4 mb-4">
-                <Upload size={32} className="text-slate-600" />
-              </div>
-              <p className="text-slate-700 font-medium mb-1">
-                Drop your PDF here
-              </p>
-              <p className="text-slate-500 text-sm mb-3">or click to browse</p>
-              <p className="text-xs text-slate-400">Supported format: PDF</p>
-            </div>
-          )}
+            <p className="text-slate-700 font-medium mb-1">
+              Drop your PDFs here
+            </p>
+            <p className="text-slate-500 text-sm mb-3">or click to browse</p>
+            <p className="text-xs text-slate-400">Supported format: PDF</p>
+          </div>
         </div>
 
-        <div className="text-center text-sm text-slate-500">
+        {fileStatuses.length > 0 && (
+          <div className="mt-4 border rounded-lg overflow-hidden">
+            <h3 className="font-medium text-slate-700 p-3 bg-slate-50 border-b">
+              Uploaded Documents ({fileStatuses.length})
+            </h3>
+            <ul className="divide-y">
+              {fileStatuses.map((file, index) => (
+                <li
+                  key={index}
+                  className="p-3 flex items-center justify-between"
+                >
+                  <div className="flex items-center">
+                    <FileText size={16} className="text-slate-500 mr-2" />
+                    <span className="text-sm text-slate-700 mr-2">
+                      {file.name}
+                    </span>
+                    {file.status === "uploading" && (
+                      <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded-full animate-pulse">
+                        Uploading...
+                      </span>
+                    )}
+                    {file.status === "success" && (
+                      <span className="text-xs px-2 py-1 bg-green-50 text-green-700 rounded-full">
+                        <Check size={12} className="inline mr-1" />
+                        Success
+                      </span>
+                    )}
+                    {file.status === "error" && (
+                      <span className="text-xs px-2 py-1 bg-red-50 text-red-700 rounded-full">
+                        <AlertCircle size={12} className="inline mr-1" />
+                        Failed
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-slate-500 hover:text-red-500 p-1 h-auto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(file.name);
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="text-center text-sm text-slate-500 mt-4">
           <p>Your documents remain private and secure</p>
         </div>
       </div>

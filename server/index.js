@@ -50,6 +50,37 @@ app.post("/upload/pdf", upload.single("pdf"), async (req, res) => {
   return res.json({ message: "uploaded" });
 });
 
+// New endpoint for multiple files
+app.post("/upload/pdfs", upload.array("pdfs", 10), async (req, res) => {
+  try {
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: "No files uploaded" });
+    }
+
+    // Process each file by adding it to the queue
+    for (const file of files) {
+      await queue.add(
+        "file-ready",
+        JSON.stringify({
+          filename: file.originalname,
+          destination: file.destination,
+          path: file.path,
+        })
+      );
+    }
+
+    return res.json({
+      message: "Files uploaded successfully",
+      count: files.length,
+    });
+  } catch (error) {
+    console.error("Error uploading files:", error);
+    return res.status(500).json({ error: "Error uploading files" });
+  }
+});
+
 app.get("/chat", async (req, res) => {
   const userQuery = req.query.message;
 
@@ -65,12 +96,12 @@ app.get("/chat", async (req, res) => {
     }
   );
   const ret = vectorStore.asRetriever({
-    k: 2,
+    k: 4,
   });
   const result = await ret.invoke(userQuery);
 
   const SYSTEM_PROMPT = `
-  You are helfull AI Assistant who answeres the user query based on the available context from PDF File.
+  You are helfull AI Assistant who answeres the user query based on the available context from PDF Files.
   Context:
   ${JSON.stringify(result)}
   `;
@@ -111,7 +142,7 @@ app.get("/chat/stream", async (req, res) => {
     );
 
     const ret = vectorStore.asRetriever({
-      k: 2,
+      k: 4,
     });
 
     const result = await ret.invoke(userQuery);
@@ -120,7 +151,8 @@ app.get("/chat/stream", async (req, res) => {
     res.write(`data: ${JSON.stringify({ type: "docs", docs: result })}\n\n`);
 
     const SYSTEM_PROMPT = `
-    You are helfull AI Assistant who answeres the user query based on the available context from PDF File.
+    You are helfull AI Assistant who answeres the user query based on the available context from PDF Files.
+    When referring to sources, mention which document(s) the information came from if that metadata is available.
     Context:
     ${JSON.stringify(result)}
     `;
