@@ -20,11 +20,13 @@ interface IMessage {
   role: "assistant" | "user";
   content?: string;
   documents?: Doc[];
+  isLoading?: boolean;
 }
 
 const ChatComponent: React.FC = () => {
   const [message, setMessage] = React.useState<string>("");
   const [messages, setMessages] = React.useState<IMessage[]>([]);
+  const [isStreaming, setIsStreaming] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -35,41 +37,131 @@ const ChatComponent: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendChatMessage = async () => {
-    if (!message.trim()) return;
+  const handleSendChatMessageStreaming = async () => {
+    if (!message.trim() || isStreaming) return;
 
     setMessages((prev) => [...prev, { role: "user", content: message }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "", isLoading: true },
+    ]);
     setMessage("");
+    setIsStreaming(true);
 
     try {
-      const res = await fetch(
-        `http://localhost:8000/chat?message=${encodeURIComponent(message)}`
+      const eventSource = new EventSource(
+        `http://localhost:8000/chat/stream?message=${encodeURIComponent(
+          message
+        )}`
       );
-      const data = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data?.message,
-          documents: data?.docs,
-        },
-      ]);
+
+      let accumulatedContent = "";
+      let documents: Doc[] | undefined;
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "docs") {
+          documents = data.docs;
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage.role === "assistant") {
+              newMessages[newMessages.length - 1] = {
+                ...lastMessage,
+                documents,
+              };
+            }
+            return newMessages;
+          });
+        } else if (data.type === "token") {
+          accumulatedContent += data.content;
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage.role === "assistant") {
+              newMessages[newMessages.length - 1] = {
+                ...lastMessage,
+                content: accumulatedContent,
+                isLoading: true,
+              };
+            }
+            return newMessages;
+          });
+        } else if (data.type === "done") {
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage.role === "assistant") {
+              newMessages[newMessages.length - 1] = {
+                ...lastMessage,
+                content: accumulatedContent,
+                documents,
+                isLoading: false,
+              };
+            }
+            return newMessages;
+          });
+          eventSource.close();
+          setIsStreaming(false);
+        } else if (data.type === "error") {
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage.role === "assistant") {
+              newMessages[newMessages.length - 1] = {
+                ...lastMessage,
+                content: "Sorry, there was an error processing your request.",
+                isLoading: false,
+              };
+            }
+            return newMessages;
+          });
+          eventSource.close();
+          setIsStreaming(false);
+        }
+      };
+
+      eventSource.onerror = () => {
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage.role === "assistant") {
+            newMessages[newMessages.length - 1] = {
+              ...lastMessage,
+              content:
+                accumulatedContent ||
+                "Sorry, there was an error connecting to the server.",
+              isLoading: false,
+            };
+          }
+          return newMessages;
+        });
+        eventSource.close();
+        setIsStreaming(false);
+      };
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, there was an error processing your request.",
-        },
-      ]);
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        const lastMessage = newMessages[newMessages.length - 1];
+        if (lastMessage.role === "assistant") {
+          newMessages[newMessages.length - 1] = {
+            ...lastMessage,
+            content: "Sorry, there was an error processing your request.",
+            isLoading: false,
+          };
+        }
+        return newMessages;
+      });
+      setIsStreaming(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendChatMessage();
+      handleSendChatMessageStreaming();
     }
   };
 
@@ -126,6 +218,11 @@ const ChatComponent: React.FC = () => {
               >
                 <div className="font-medium mb-1">
                   {msg.role === "user" ? "You" : "Assistant"}
+                  {msg.isLoading && (
+                    <span className="ml-2 text-xs opacity-75 animate-pulse">
+                      typing...
+                    </span>
+                  )}
                 </div>
                 <div className="prose prose-sm">
                   {formatMessageContent(msg.content)}
@@ -172,10 +269,11 @@ const ChatComponent: React.FC = () => {
             onKeyDown={handleKeyDown}
             placeholder="Type your question here..."
             className="flex-1"
+            disabled={isStreaming}
           />
           <Button
-            onClick={handleSendChatMessage}
-            disabled={!message.trim()}
+            onClick={handleSendChatMessageStreaming}
+            disabled={!message.trim() || isStreaming}
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Send size={18} />

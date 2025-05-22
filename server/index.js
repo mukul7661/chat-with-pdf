@@ -89,4 +89,67 @@ app.get("/chat", async (req, res) => {
   });
 });
 
+app.get("/chat/stream", async (req, res) => {
+  const userQuery = req.query.message;
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  try {
+    const embeddings = new OpenAIEmbeddings({
+      model: "text-embedding-3-small",
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const vectorStore = await QdrantVectorStore.fromExistingCollection(
+      embeddings,
+      {
+        url: "http://localhost:6333",
+        collectionName: "langchainjs-testing",
+      }
+    );
+
+    const ret = vectorStore.asRetriever({
+      k: 2,
+    });
+
+    const result = await ret.invoke(userQuery);
+
+    // Send documents first
+    res.write(`data: ${JSON.stringify({ type: "docs", docs: result })}\n\n`);
+
+    const SYSTEM_PROMPT = `
+    You are helfull AI Assistant who answeres the user query based on the available context from PDF File.
+    Context:
+    ${JSON.stringify(result)}
+    `;
+
+    const stream = await client.chat.completions.create({
+      model: "gpt-4.1",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userQuery },
+      ],
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      if (content) {
+        res.write(`data: ${JSON.stringify({ type: "token", content })}\n\n`);
+      }
+    }
+
+    res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+  } catch (error) {
+    console.error("Streaming error:", error);
+    res.write(
+      `data: ${JSON.stringify({ type: "error", error: error.message })}\n\n`
+    );
+  } finally {
+    res.end();
+  }
+});
+
 app.listen(8000, () => console.log(`Server started on PORT:${8000}`));
