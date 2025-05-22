@@ -54,9 +54,14 @@ app.post("/upload/pdf", upload.single("pdf"), async (req, res) => {
 app.post("/upload/pdfs", upload.array("pdfs", 10), async (req, res) => {
   try {
     const files = req.files;
+    const chatId = req.body.chatId;
 
     if (!files || files.length === 0) {
       return res.status(400).json({ error: "No files uploaded" });
+    }
+
+    if (!chatId) {
+      return res.status(400).json({ error: "No chat ID provided" });
     }
 
     // Process each file by adding it to the queue
@@ -67,6 +72,7 @@ app.post("/upload/pdfs", upload.array("pdfs", 10), async (req, res) => {
           filename: file.originalname,
           destination: file.destination,
           path: file.path,
+          chatId: chatId,
         })
       );
     }
@@ -83,6 +89,11 @@ app.post("/upload/pdfs", upload.array("pdfs", 10), async (req, res) => {
 
 app.get("/chat", async (req, res) => {
   const userQuery = req.query.message;
+  const chatId = req.query.chatId;
+
+  if (!chatId) {
+    return res.status(400).json({ error: "No chat ID provided" });
+  }
 
   const embeddings = new OpenAIEmbeddings({
     model: "text-embedding-3-small",
@@ -95,8 +106,22 @@ app.get("/chat", async (req, res) => {
       collectionName: "langchainjs-testing",
     }
   );
+
+  // Create a filter to only get documents with the current chatId
+  const filter = {
+    must: [
+      {
+        key: "metadata.chatId",
+        match: {
+          value: chatId,
+        },
+      },
+    ],
+  };
+
   const ret = vectorStore.asRetriever({
     k: 4,
+    filter: filter,
   });
   const result = await ret.invoke(userQuery);
 
@@ -122,6 +147,11 @@ app.get("/chat", async (req, res) => {
 
 app.get("/chat/stream", async (req, res) => {
   const userQuery = req.query.message;
+  const chatId = req.query.chatId;
+
+  if (!chatId) {
+    return res.status(400).json({ error: "No chat ID provided" });
+  }
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -141,8 +171,21 @@ app.get("/chat/stream", async (req, res) => {
       }
     );
 
+    // Create a filter to only get documents with the current chatId
+    const filter = {
+      must: [
+        {
+          key: "metadata.chatId",
+          match: {
+            value: chatId,
+          },
+        },
+      ],
+    };
+
     const ret = vectorStore.asRetriever({
       k: 4,
+      filter: filter,
     });
 
     const result = await ret.invoke(userQuery);

@@ -8,7 +8,11 @@ interface FileStatus {
   status: "uploading" | "success" | "error";
 }
 
-const FileUploadComponent: React.FC = () => {
+interface FileUploadProps {
+  chatId: string;
+}
+
+const FileUploadComponent: React.FC<FileUploadProps> = ({ chatId }) => {
   const [fileStatuses, setFileStatuses] = React.useState<FileStatus[]>([]);
 
   const handleFileUpload = async (files: FileList) => {
@@ -28,6 +32,9 @@ const FileUploadComponent: React.FC = () => {
       Array.from(files).forEach((file) => {
         formData.append("pdfs", file);
       });
+
+      // Include the chat ID in the upload
+      formData.append("chatId", chatId);
 
       const response = await fetch("http://localhost:8000/upload/pdfs", {
         method: "POST",

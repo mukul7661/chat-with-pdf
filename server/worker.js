@@ -30,6 +30,7 @@ const worker = new Worker(
           ...doc.metadata,
           source: doc.metadata?.source || data.path,
           originalFilename: originalFilename,
+          chatId: data.chatId,
         };
 
         return new Document({
@@ -39,7 +40,7 @@ const worker = new Worker(
       });
 
       console.log(
-        `Loaded ${enhancedDocs.length} documents from ${originalFilename}`
+        `Loaded ${enhancedDocs.length} documents from ${originalFilename} for chat ${data.chatId}`
       );
 
       const embeddings = new OpenAIEmbeddings({

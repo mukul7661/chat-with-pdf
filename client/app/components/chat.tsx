@@ -15,18 +15,32 @@ interface Doc {
     };
     source?: string;
     originalFilename?: string;
+    chatId?: string;
   };
   id?: string;
 }
 
 interface IMessage {
-  role: "assistant" | "user";
-  content?: string;
-  documents?: Doc[];
+  role: "user" | "assistant";
+  content: string;
   isLoading?: boolean;
+  documents?: Doc[];
 }
 
-const ChatComponent: React.FC = () => {
+// Utility function to generate a random UUID
+const generateUUID = () => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+interface ChatComponentProps {
+  chatId: string;
+}
+
+const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
   const [message, setMessage] = React.useState<string>("");
   const [messages, setMessages] = React.useState<IMessage[]>([]);
   const [isStreaming, setIsStreaming] = React.useState(false);
@@ -55,7 +69,7 @@ const ChatComponent: React.FC = () => {
       const eventSource = new EventSource(
         `http://localhost:8000/chat/stream?message=${encodeURIComponent(
           message
-        )}`
+        )}&chatId=${encodeURIComponent(chatId)}`
       );
 
       let accumulatedContent = "";
@@ -99,29 +113,13 @@ const ChatComponent: React.FC = () => {
               newMessages[newMessages.length - 1] = {
                 ...lastMessage,
                 content: accumulatedContent,
-                documents,
                 isLoading: false,
               };
             }
             return newMessages;
           });
-          eventSource.close();
           setIsStreaming(false);
-        } else if (data.type === "error") {
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            const lastMessage = newMessages[newMessages.length - 1];
-            if (lastMessage.role === "assistant") {
-              newMessages[newMessages.length - 1] = {
-                ...lastMessage,
-                content: "Sorry, there was an error processing your request.",
-                isLoading: false,
-              };
-            }
-            return newMessages;
-          });
           eventSource.close();
-          setIsStreaming(false);
         }
       };
 
@@ -134,36 +132,23 @@ const ChatComponent: React.FC = () => {
               ...lastMessage,
               content:
                 accumulatedContent ||
-                "Sorry, there was an error connecting to the server.",
+                "Sorry, I encountered an error. Please try again.",
               isLoading: false,
             };
           }
           return newMessages;
         });
-        eventSource.close();
         setIsStreaming(false);
+        eventSource.close();
       };
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        const lastMessage = newMessages[newMessages.length - 1];
-        if (lastMessage.role === "assistant") {
-          newMessages[newMessages.length - 1] = {
-            ...lastMessage,
-            content: "Sorry, there was an error processing your request.",
-            isLoading: false,
-          };
-        }
-        return newMessages;
-      });
       setIsStreaming(false);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
       handleSendChatMessageStreaming();
     }
   };
