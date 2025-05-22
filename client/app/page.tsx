@@ -21,12 +21,14 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="bg-slate-100 min-h-screen">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="flex flex-col md:flex-row min-h-screen">
-        <div className="w-full md:w-[350px] bg-white p-6 flex items-center justify-center shadow-sm z-10">
-          {chatId && <FileUploadComponent chatId={chatId} />}
+        <div className="w-full md:w-[400px] bg-white dark:bg-slate-800 shadow-lg z-10 overflow-hidden border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700">
+          <div className="h-full p-6">
+            {chatId && <FileUploadComponent chatId={chatId} />}
+          </div>
         </div>
-        <div className="flex-1 md:border-l border-slate-200">
+        <div className="flex-1">
           <ChatComponent chatId={chatId} />
         </div>
       </div>
