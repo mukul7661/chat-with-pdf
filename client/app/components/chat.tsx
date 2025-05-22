@@ -258,7 +258,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
                   <div className="w-16 h-16 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center text-white mb-6">
                     <MessageSquare size={28} />
                   </div>
-                  <h2 className="text-xl font-medium text-center text-slate-800 dark:text-slate-200 mb-1">
+                  <h2 className="text-xl font-medium text-center text-slate-800 dark:text-slate-200 mb-1 whitespace-nowrap">
                     Ask anything about your PDFs
                   </h2>
                 </motion.div>
