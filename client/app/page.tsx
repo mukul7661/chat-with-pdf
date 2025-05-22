@@ -1,16 +1,17 @@
-import FileUploadComponent from './components/file-upload';
-import ChatComponent from './components/chat';
+import FileUploadComponent from "./components/file-upload";
+import ChatComponent from "./components/chat";
+
 export default function Home() {
   return (
-    <div>
-      <div className="min-h-screen w-screen flex">
-        <div className="w-[30vw] min-h-screen p-4 flex justify-center items-center">
+    <main className="bg-slate-100 min-h-screen">
+      <div className="flex flex-col md:flex-row min-h-screen">
+        <div className="w-full md:w-[350px] bg-white p-6 flex items-center justify-center shadow-sm z-10">
           <FileUploadComponent />
         </div>
-        <div className="w-[70vw] min-h-screen border-l-2">
+        <div className="flex-1 md:border-l border-slate-200">
           <ChatComponent />
         </div>
       </div>
-    </div>
+    </main>
   );
 }
