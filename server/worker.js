@@ -43,6 +43,17 @@ const worker = new Worker(
         `Loaded ${enhancedDocs.length} documents from ${originalFilename} for chat ${data.chatId}`
       );
 
+      // Split the documents into chunks
+      const textSplitter = new CharacterTextSplitter({
+        separator: "\n",
+        chunkSize: 1000,
+        chunkOverlap: 200,
+      });
+
+      const splitDocs = await textSplitter.splitDocuments(enhancedDocs);
+
+      console.log(`Split into ${splitDocs.length} chunks for processing`);
+
       const embeddings = new OpenAIEmbeddings({
         model: "text-embedding-3-small",
         apiKey: process.env.OPENAI_API_KEY,
@@ -56,9 +67,9 @@ const worker = new Worker(
         }
       );
 
-      await vectorStore.addDocuments(enhancedDocs);
+      await vectorStore.addDocuments(splitDocs);
       console.log(
-        `All documents from ${originalFilename} are added to vector store`
+        `All chunks from ${originalFilename} are added to vector store`
       );
     } catch (error) {
       console.error(`Error processing file ${data.filename}:`, error);
