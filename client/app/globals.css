@@ -120,3 +120,62 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Code block styling */
+pre {
+  overflow-x: auto;
+  position: relative;
+  margin: 0;
+}
+
+.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1em;
+  color: #c9d1d9;
+  background: #0d1117;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+  color: #ff7b72;
+}
+
+.hljs-string,
+.hljs-doctag {
+  color: #a5d6ff;
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-selector-id {
+  color: #d2a8ff;
+}
+
+.hljs-variable,
+.hljs-template-variable {
+  color: #ffa657;
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-deletion {
+  color: #8b949e;
+}
+
+.hljs-meta {
+  color: #f0883e;
+}
+
+.hljs-attr,
+.hljs-property {
+  color: #7ee787;
+}
+
+.hljs-number {
+  color: #a5d6ff;
+}
+
+.prose code {
+  white-space: pre-wrap;
+}

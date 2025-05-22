@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import * as React from "react";
 import { Send, File, ExternalLink } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
 
 interface Doc {
   pageContent?: string;
@@ -165,20 +167,6 @@ const ChatComponent: React.FC = () => {
     }
   };
 
-  const formatMessageContent = (content?: string) => {
-    if (!content) return "";
-
-    // Split by line breaks and render paragraphs
-    return content.split("\n").map((line, i) => (
-      <p
-        key={i}
-        className={line.match(/^\*\*.*\*\*$/) ? "font-bold my-1" : "my-1"}
-      >
-        {line}
-      </p>
-    ));
-  };
-
   return (
     <div className="flex flex-col h-screen">
       <div className="bg-slate-800 p-4 text-white">
@@ -224,8 +212,47 @@ const ChatComponent: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <div className="prose prose-sm">
-                  {formatMessageContent(msg.content)}
+                <div
+                  className={`prose prose-sm ${
+                    msg.role === "user" ? "prose-invert" : "prose-slate"
+                  } max-w-none`}
+                >
+                  {msg.content ? (
+                    <ReactMarkdown
+                      rehypePlugins={[rehypeHighlight]}
+                      components={{
+                        code({
+                          node,
+                          inline,
+                          className,
+                          children,
+                          ...props
+                        }: any) {
+                          const match = /language-(\w+)/.exec(className || "");
+                          return !inline && match ? (
+                            <div className="bg-slate-800 rounded-md p-4 my-2 overflow-x-auto">
+                              <pre className="text-slate-100">
+                                <code className={className} {...props}>
+                                  {children}
+                                </code>
+                              </pre>
+                            </div>
+                          ) : (
+                            <code
+                              className={`${className} bg-slate-200 px-1 py-0.5 rounded text-slate-800`}
+                              {...props}
+                            >
+                              {children}
+                            </code>
+                          );
+                        },
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  ) : (
+                    ""
+                  )}
                 </div>
 
                 {msg.documents && msg.documents.length > 0 && (
