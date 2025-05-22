@@ -6,6 +6,13 @@ import * as React from "react";
 import { Send, File, ExternalLink } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Doc {
   pageContent?: string;
@@ -153,6 +160,67 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
     }
   };
 
+  // Function to identify and highlight key fragments of text
+  const highlightRelevantText = (
+    text: string,
+    userQuery: string,
+    assistantResponse: string
+  ) => {
+    if (!text) return [];
+
+    // Create a set of important terms from the user query and assistant response
+    const createKeyTerms = (text: string) => {
+      const normalized = text
+        .toLowerCase()
+        .replace(/[.,?!;:()"'-]/g, " ") // Replace punctuation with spaces
+        .replace(/\s+/g, " ")
+        .trim(); // Normalize spaces
+
+      // Extract terms with 4+ characters as potentially meaningful
+      return normalized
+        .split(" ")
+        .filter((word) => word.length >= 4)
+        .reduce((acc, word) => {
+          acc.add(word);
+          return acc;
+        }, new Set<string>());
+    };
+
+    const queryTerms = createKeyTerms(userQuery);
+    const responseTerms = createKeyTerms(assistantResponse);
+
+    // Split text into paragraphs
+    const paragraphs = text.split("\n");
+
+    // Score each paragraph based on query and response term matches
+    const scoredParagraphs = paragraphs.map((paragraph, index) => {
+      const normalizedParagraph = paragraph.toLowerCase();
+      let score = 0;
+
+      // Score based on query terms (higher weight)
+      queryTerms.forEach((term) => {
+        if (normalizedParagraph.includes(term)) score += 2;
+      });
+
+      // Score based on response terms (lower weight)
+      responseTerms.forEach((term) => {
+        if (normalizedParagraph.includes(term)) score += 1;
+      });
+
+      return {
+        text: paragraph,
+        score,
+        index,
+      };
+    });
+
+    // Sort by score (highest first) and mark top scoring paragraphs as highlighted
+    return scoredParagraphs.map((para) => ({
+      ...para,
+      isHighlighted: para.score > 0,
+    }));
+  };
+
   return (
     <div className="flex flex-col h-screen">
       <div className="bg-slate-800 p-4 text-white">
@@ -246,26 +314,75 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
                     <div className="text-xs font-medium text-slate-500 mb-2">
                       Sources:
                     </div>
-                    {msg.documents.map((doc, i) => (
-                      <div
-                        key={i}
-                        className="bg-slate-100 rounded p-2 mb-2 text-xs"
-                      >
-                        <div className="flex items-center text-slate-600 mb-1">
-                          <File size={12} className="mr-1" />
-                          <span className="truncate">
-                            {doc.metadata?.originalFilename ||
-                              doc.metadata?.source?.split("/").pop() ||
-                              "Document"}
-                            {doc.metadata?.loc?.pageNumber &&
-                              ` (Page ${doc.metadata.loc.pageNumber})`}
-                          </span>
-                        </div>
-                        <p className="text-slate-700 line-clamp-2">
-                          {doc.pageContent}
-                        </p>
-                      </div>
-                    ))}
+                    {msg.documents.map((doc, i) => {
+                      // Find the user's message that preceded this assistant message
+                      const userMessage = messages.find(
+                        (m, idx) =>
+                          m.role === "user" &&
+                          messages[idx + 1]?.role === "assistant" &&
+                          messages[idx + 1] === msg
+                      );
+
+                      const userQuery = userMessage?.content || "";
+                      const assistantResponse = msg.content;
+
+                      return (
+                        <Dialog key={i}>
+                          <DialogTrigger asChild>
+                            <div className="bg-slate-100 rounded p-2 mb-2 text-xs cursor-pointer hover:bg-slate-200 transition-colors">
+                              <div className="flex items-center text-slate-600 mb-1">
+                                <File size={12} className="mr-1" />
+                                <span className="truncate">
+                                  {doc.metadata?.originalFilename ||
+                                    doc.metadata?.source?.split("/").pop() ||
+                                    "Document"}
+                                  {doc.metadata?.loc?.pageNumber &&
+                                    ` (Page ${doc.metadata.loc.pageNumber})`}
+                                </span>
+                              </div>
+                              <p className="text-slate-700 line-clamp-2">
+                                {doc.pageContent}
+                              </p>
+                            </div>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>
+                                {doc.metadata?.originalFilename ||
+                                  doc.metadata?.source?.split("/").pop() ||
+                                  "Document"}
+                                {doc.metadata?.loc?.pageNumber &&
+                                  ` (Page ${doc.metadata.loc.pageNumber})`}
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="mt-4 px-2 py-4 bg-slate-50 rounded-lg border border-slate-200">
+                              <div className="prose prose-slate max-w-none text-sm leading-relaxed">
+                                {highlightRelevantText(
+                                  doc.pageContent || "",
+                                  userQuery,
+                                  assistantResponse
+                                ).map((paragraph, idx) =>
+                                  paragraph.text.trim() ? (
+                                    <p
+                                      key={idx}
+                                      className={`mb-3 ${
+                                        paragraph.isHighlighted
+                                          ? "bg-yellow-100 px-2 py-1 border-l-4 border-yellow-400 rounded"
+                                          : ""
+                                      }`}
+                                    >
+                                      {paragraph.text}
+                                    </p>
+                                  ) : (
+                                    <div key={idx} className="h-3"></div>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      );
+                    })}
                   </div>
                 )}
               </div>
