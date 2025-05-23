@@ -65,7 +65,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const { isFileUploaded } = useFileStore();
+  const { isFileUploaded, fileStatusLastUpdated } = useFileStore();
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const lastUpdateCheckRef = React.useRef<number>(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -75,8 +77,55 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
     scrollToBottom();
   }, [messages]);
 
+  // Check if files are still processing
+  React.useEffect(() => {
+    const checkProcessingStatus = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8000/file-status?chatId=${chatId}`
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const hasProcessingFiles = data.statuses.some(
+            (s: any) => s.status === "processing"
+          );
+          setIsProcessing(hasProcessingFiles);
+          lastUpdateCheckRef.current = Date.now();
+        }
+      } catch (error) {
+        console.error("Error checking processing status:", error);
+      }
+    };
+
+    // Check immediately when fileStatusLastUpdated changes
+    if (fileStatusLastUpdated > lastUpdateCheckRef.current) {
+      checkProcessingStatus();
+    }
+
+    // Keep polling at a reduced frequency as a backup
+    const interval = setInterval(checkProcessingStatus, 1000);
+
+    return () => clearInterval(interval);
+  }, [chatId, fileStatusLastUpdated]);
+
   const handleSendChatMessageStreaming = async () => {
     if (!message.trim() || isStreaming) return;
+
+    // Check if any files are still processing
+    if (isProcessing) {
+      setMessages((prev) => [...prev, { role: "user", content: message }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Your documents are still being processed. Please wait until processing is complete before asking questions.",
+        },
+      ]);
+      setMessage("");
+      return;
+    }
 
     // Check if any files have been uploaded
     if (!isFileUploaded) {
@@ -267,6 +316,24 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
           // Centered input when no messages
           <div className="flex-1 flex items-center justify-center">
             <div className="w-full max-w-lg mx-auto px-6">
+              {/* {isProcessing && (
+                <div className="mb-8 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-center">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 mx-auto mb-2" />
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    Your documents are still being processed. You can start
+                    chatting once processing is complete.
+                  </p>
+                </div>
+              )} */}
+              {isProcessing && (
+                <div className="absolute top-0 left-0 right-0 p-3 bg-yellow-100/80 dark:bg-yellow-900/50 border-b border-yellow-200 dark:border-yellow-800 backdrop-blur-sm z-10">
+                  <div className="flex items-center justify-center text-sm text-yellow-800 dark:text-yellow-200">
+                    <div className="w-4 h-4 border-2 border-yellow-500 dark:border-yellow-400 border-t-transparent rounded-full animate-spin mr-2" />
+                    Your documents are still being processed. You can start
+                    chatting once processing is complete.
+                  </div>
+                </div>
+              )}
               <div className="relative">
                 <motion.div
                   className="absolute -top-32 left-1/2 transform -translate-x-1/2 flex flex-col items-center"
@@ -285,14 +352,22 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Type your question here..."
-                  className="h-14 text-lg rounded-full pl-4 pr-12 bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 shadow-md focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400"
-                  disabled={isStreaming}
+                  placeholder={
+                    isProcessing
+                      ? "Waiting for documents to process..."
+                      : "Type your question here..."
+                  }
+                  className={`h-14 text-lg rounded-full pl-4 pr-12 bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 shadow-md focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400 ${
+                    isProcessing ? "opacity-70" : ""
+                  }`}
+                  disabled={isStreaming || isProcessing}
                 />
                 <Button
                   onClick={handleSendChatMessageStreaming}
-                  disabled={!message.trim() || isStreaming}
-                  className="absolute right-1 top-1.5 rounded-full w-11 h-11 p-0 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition-all shadow-sm"
+                  disabled={!message.trim() || isStreaming || isProcessing}
+                  className={`absolute right-1 top-1.5 rounded-full w-11 h-11 p-0 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition-all shadow-sm ${
+                    isProcessing ? "opacity-50" : ""
+                  }`}
                 >
                   <Send size={18} />
                 </Button>
@@ -302,8 +377,19 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
         ) : (
           // Messages layout when conversation exists
           <>
+            {isProcessing && (
+              <div className="absolute top-0 left-0 right-0 p-3 bg-yellow-100/80 dark:bg-yellow-900/50 border-b border-yellow-200 dark:border-yellow-800 backdrop-blur-sm z-10">
+                <div className="flex items-center justify-center text-sm text-yellow-800 dark:text-yellow-200">
+                  <div className="w-4 h-4 border-2 border-yellow-500 dark:border-yellow-400 border-t-transparent rounded-full animate-spin mr-2" />
+                  Documents are still being processed. Some information may not
+                  be available yet.
+                </div>
+              </div>
+            )}
             <div
-              className="flex-1 overflow-auto px-4 py-6 md:px-6 lg:px-8 pb-24 md:pb-20"
+              className={`flex-1 overflow-auto px-4 py-6 md:px-6 lg:px-8 pb-24 md:pb-20 ${
+                isProcessing ? "pt-14" : ""
+              }`}
               ref={chatContainerRef}
             >
               <div className="max-w-screen-lg mx-auto">
@@ -535,14 +621,22 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Ask a question about your documents..."
-                    className="rounded-full pl-4 pr-12 py-6 bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 shadow-sm focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400"
-                    disabled={isStreaming}
+                    placeholder={
+                      isProcessing
+                        ? "Waiting for documents to process..."
+                        : "Ask a question about your documents..."
+                    }
+                    className={`rounded-full pl-4 pr-12 py-6 bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 shadow-sm focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400 ${
+                      isProcessing ? "opacity-70" : ""
+                    }`}
+                    disabled={isStreaming || isProcessing}
                   />
                   <Button
                     onClick={handleSendChatMessageStreaming}
-                    disabled={!message.trim() || isStreaming}
-                    className="absolute right-1 top-1 rounded-full w-10 h-10 p-0 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition-all shadow-sm"
+                    disabled={!message.trim() || isStreaming || isProcessing}
+                    className={`absolute right-1 top-1 rounded-full w-10 h-10 p-0 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition-all shadow-sm ${
+                      isProcessing ? "opacity-50" : ""
+                    }`}
                   >
                     <Send size={16} />
                   </Button>

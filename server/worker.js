@@ -6,8 +6,30 @@ import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { CharacterTextSplitter } from "@langchain/textsplitters";
 import dotenv from "dotenv";
 import path from "path";
+import fetch from "node-fetch";
 
 dotenv.config();
+
+// Function to notify the server that a job is completed
+async function notifyJobCompletion(jobId) {
+  try {
+    const response = await fetch("http://localhost:8000/complete-job", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ jobId }),
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to notify job completion: ${response.statusText}`);
+    } else {
+      console.log(`Successfully notified job completion for job ${jobId}`);
+    }
+  } catch (error) {
+    console.error("Error notifying job completion:", error);
+  }
+}
 
 const worker = new Worker(
   "file-upload-queue",
@@ -71,8 +93,13 @@ const worker = new Worker(
       console.log(
         `All chunks from ${originalFilename} are added to vector store`
       );
+
+      // Notify job completion
+      await notifyJobCompletion(job.id);
     } catch (error) {
       console.error(`Error processing file ${data.filename}:`, error);
+      // Notify that the job failed but is completed
+      await notifyJobCompletion(job.id);
     }
   },
   {

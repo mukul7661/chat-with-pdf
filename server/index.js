@@ -19,6 +19,9 @@ const queue = new Queue("file-upload-queue", {
   },
 });
 
+// Track processing status of files
+const processingFiles = new Map();
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "uploads/");
@@ -64,9 +67,11 @@ app.post("/upload/pdfs", upload.array("pdfs", 10), async (req, res) => {
       return res.status(400).json({ error: "No chat ID provided" });
     }
 
+    const jobIds = [];
+
     // Process each file by adding it to the queue
     for (const file of files) {
-      await queue.add(
+      const job = await queue.add(
         "file-ready",
         JSON.stringify({
           filename: file.originalname,
@@ -75,15 +80,99 @@ app.post("/upload/pdfs", upload.array("pdfs", 10), async (req, res) => {
           chatId: chatId,
         })
       );
+
+      // Track the file's processing status
+      processingFiles.set(job.id, {
+        jobId: job.id,
+        filename: file.originalname,
+        chatId: chatId,
+        status: "processing",
+        createdAt: new Date(),
+      });
+
+      jobIds.push(job.id);
     }
 
     return res.json({
       message: "Files uploaded successfully",
       count: files.length,
+      jobIds: jobIds,
     });
   } catch (error) {
     console.error("Error uploading files:", error);
     return res.status(500).json({ error: "Error uploading files" });
+  }
+});
+
+// New endpoint to check processing status
+app.get("/file-status", async (req, res) => {
+  const jobIds = req.query.jobIds ? req.query.jobIds.split(",") : [];
+  const chatId = req.query.chatId;
+
+  if (!jobIds.length && !chatId) {
+    return res
+      .status(400)
+      .json({ error: "Either jobIds or chatId must be provided" });
+  }
+
+  try {
+    let statuses = [];
+
+    if (jobIds.length) {
+      // Get status for specific job IDs
+      statuses = jobIds.map((id) => {
+        const status = processingFiles.get(id);
+        return status || { jobId: id, status: "unknown" };
+      });
+    } else if (chatId) {
+      // Get all statuses for a chat ID
+      for (const [id, status] of processingFiles.entries()) {
+        if (status.chatId === chatId) {
+          statuses.push(status);
+        }
+      }
+    }
+
+    const allCompleted =
+      statuses.length > 0 &&
+      statuses.every((status) => status.status === "completed");
+
+    return res.json({
+      statuses,
+      allCompleted,
+    });
+  } catch (error) {
+    console.error("Error checking file status:", error);
+    return res.status(500).json({ error: "Error checking file status" });
+  }
+});
+
+// New endpoint to mark a job as completed - to be called by the worker
+app.post("/complete-job", express.json(), async (req, res) => {
+  const { jobId } = req.body;
+
+  if (!jobId) {
+    return res.status(400).json({ error: "No job ID provided" });
+  }
+
+  try {
+    const fileStatus = processingFiles.get(jobId);
+
+    if (fileStatus) {
+      fileStatus.status = "completed";
+      fileStatus.completedAt = new Date();
+      processingFiles.set(jobId, fileStatus);
+
+      return res.json({
+        message: "Job marked as completed",
+        status: fileStatus,
+      });
+    } else {
+      return res.status(404).json({ error: "Job not found" });
+    }
+  } catch (error) {
+    console.error("Error completing job:", error);
+    return res.status(500).json({ error: "Error completing job" });
   }
 });
 

@@ -14,7 +14,8 @@ import { useFileStore } from "@/lib/store";
 
 interface FileStatus {
   name: string;
-  status: "uploading" | "success" | "error";
+  status: "uploading" | "processing" | "success" | "error";
+  jobId?: string;
 }
 
 interface FileUploadProps {
@@ -24,7 +25,106 @@ interface FileUploadProps {
 const FileUploadComponent: React.FC<FileUploadProps> = ({ chatId }) => {
   const [fileStatuses, setFileStatuses] = React.useState<FileStatus[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
-  const { setFileUploaded } = useFileStore();
+  const [isChecking, setIsChecking] = React.useState(false);
+  const { setFileUploaded, updateFileStatus } = useFileStore();
+  const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Poll for file processing status
+  const checkFileStatus = React.useCallback(
+    async (jobIds: string[]) => {
+      if (jobIds.length === 0 || isChecking) return;
+
+      setIsChecking(true);
+      try {
+        const response = await fetch(
+          `http://localhost:8000/file-status?jobIds=${jobIds.join(",")}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to check file status");
+        }
+
+        const data = await response.json();
+
+        // Update file statuses based on backend response
+        setFileStatuses((current) => {
+          const updatedStatuses = current.map((fileStatus) => {
+            const updatedStatus = data.statuses.find(
+              (s: any) => s.jobId === fileStatus.jobId
+            );
+
+            if (updatedStatus && updatedStatus.status === "completed") {
+              return {
+                ...fileStatus,
+                status: "success" as const,
+              };
+            }
+
+            return fileStatus;
+          });
+
+          return updatedStatuses;
+        });
+
+        // If all files are processed, stop polling
+        if (data.allCompleted) {
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+        }
+      } catch (error) {
+        console.error("Error checking file status:", error);
+      } finally {
+        setIsChecking(false);
+      }
+    },
+    [isChecking]
+  );
+
+  // Effect to update shared file upload state
+  React.useEffect(() => {
+    // Check if any files are successfully processed
+    const hasSuccessFiles = fileStatuses.some(
+      (file) => file.status === "success"
+    );
+
+    // Update global state based on file statuses using the newer method
+    updateFileStatus(hasSuccessFiles);
+  }, [fileStatuses, updateFileStatus]);
+
+  // Start polling when component mounts or when file statuses change
+  React.useEffect(() => {
+    const processingFiles = fileStatuses.filter(
+      (f) => f.status === "processing" && f.jobId
+    );
+
+    if (processingFiles.length > 0) {
+      const jobIds = processingFiles
+        .map((f) => f.jobId as string)
+        .filter(Boolean);
+
+      // Clear existing interval if any
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+
+      // Check immediately
+      checkFileStatus(jobIds);
+
+      // Set up polling interval
+      pollingIntervalRef.current = setInterval(() => {
+        checkFileStatus(jobIds);
+      }, 2000); // Poll every 2 seconds
+    }
+
+    // Clean up interval on unmount
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [fileStatuses, checkFileStatus]);
 
   const handleFileUpload = async (files: FileList) => {
     if (files.length === 0) return;
@@ -56,19 +156,30 @@ const FileUploadComponent: React.FC<FileUploadProps> = ({ chatId }) => {
         throw new Error("Upload failed");
       }
 
-      // Mark all files as successfully uploaded
+      const data = await response.json();
+
+      // Mark files as processing (not success yet) and associate job IDs
       setFileStatuses((current) =>
-        current.map((f) =>
-          Array.from(files).some((file) => file.name === f.name)
-            ? { ...f, status: "success" as const }
-            : f
-        )
+        current.map((f, index) => {
+          if (Array.from(files).some((file) => file.name === f.name)) {
+            const fileIndex = Array.from(files).findIndex(
+              (file) => file.name === f.name
+            );
+            return {
+              ...f,
+              status: "processing" as const,
+              jobId: data.jobIds[fileIndex],
+            };
+          }
+          return f;
+        })
       );
 
-      // Set the file uploaded state to true
-      setFileUploaded(true);
+      // Notify that the upload itself succeeded (not processing)
+      // This helps provide immediate feedback
+      updateFileStatus(true);
 
-      console.log(`${files.length} files uploaded successfully`);
+      console.log(`${files.length} files uploaded and processing`);
     } catch (error) {
       console.error(`Error uploading files:`, error);
 
@@ -239,7 +350,8 @@ const FileUploadComponent: React.FC<FileUploadProps> = ({ chatId }) => {
                         }
                       `}
                       >
-                        {file.status === "uploading" ? (
+                        {file.status === "uploading" ||
+                        file.status === "processing" ? (
                           <div className="w-4 h-4 border-2 border-indigo-500 dark:border-indigo-400 border-t-transparent rounded-full animate-spin" />
                         ) : file.status === "success" ? (
                           <Check
@@ -260,8 +372,10 @@ const FileUploadComponent: React.FC<FileUploadProps> = ({ chatId }) => {
                         <div className="text-xs text-slate-500 dark:text-slate-400">
                           {file.status === "uploading"
                             ? "Uploading..."
+                            : file.status === "processing"
+                            ? "Processing document..."
                             : file.status === "success"
-                            ? "Successfully uploaded"
+                            ? "Successfully processed"
                             : "Upload failed"}
                         </div>
                       </div>
