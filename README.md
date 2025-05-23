@@ -143,6 +143,18 @@ pnpm run dev
 
 Visit `http://localhost:3000` to access the application.
 
+
+## Improvements
+
+- Basic document management (delete, rename)
+- Client code refactor
+- Responsive design for mobile screen
+- Setup the whole project with Docker-compose
+
+## Challenges Faced
+
+I was unfamiliar with concepts like RAG, vector embeddings, and LangChain. To overcome this, I watched tutorials and studied the official documentation to build a solid understanding.
+
 ## Features
 
 - Upload PDF documents
