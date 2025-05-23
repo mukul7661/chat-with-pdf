@@ -1,4 +1,4 @@
-import { Worker } from "bullmq";
+import { Worker, Job } from "bullmq";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { QdrantVectorStore } from "@langchain/qdrant";
 import { Document } from "@langchain/core/documents";
@@ -10,8 +10,15 @@ import fetch from "node-fetch";
 
 dotenv.config();
 
+interface JobData {
+  filename: string;
+  destination: string;
+  path: string;
+  chatId?: string;
+}
+
 // Function to notify the server that a job is completed
-async function notifyJobCompletion(jobId) {
+async function notifyJobCompletion(jobId: string): Promise<void> {
   try {
     const response = await fetch("http://localhost:8000/complete-job", {
       method: "POST",
@@ -33,9 +40,9 @@ async function notifyJobCompletion(jobId) {
 
 const worker = new Worker(
   "file-upload-queue",
-  async (job) => {
+  async (job: Job) => {
     console.log(`Processing job:`, job.data);
-    const data = JSON.parse(job.data);
+    const data: JobData = JSON.parse(job.data);
 
     try {
       // Load the PDF
@@ -44,6 +51,7 @@ const worker = new Worker(
 
       // Get the original filename (without the path)
       const originalFilename = path.basename(data.filename);
+      const chatId = data.chatId || "unknown";
 
       // Enhance each document with the source filename in metadata
       const enhancedDocs = docs.map((doc) => {
@@ -52,7 +60,7 @@ const worker = new Worker(
           ...doc.metadata,
           source: doc.metadata?.source || data.path,
           originalFilename: originalFilename,
-          chatId: data.chatId,
+          chatId: chatId,
         };
 
         return new Document({
@@ -62,7 +70,7 @@ const worker = new Worker(
       });
 
       console.log(
-        `Loaded ${enhancedDocs.length} documents from ${originalFilename} for chat ${data.chatId}`
+        `Loaded ${enhancedDocs.length} documents from ${originalFilename} for chat ${chatId}`
       );
 
       // Split the documents into chunks
@@ -78,7 +86,7 @@ const worker = new Worker(
 
       const embeddings = new OpenAIEmbeddings({
         model: "text-embedding-3-small",
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: process.env.OPENAI_API_KEY || "",
       });
 
       const vectorStore = await QdrantVectorStore.fromExistingCollection(
@@ -95,18 +103,18 @@ const worker = new Worker(
       );
 
       // Notify job completion
-      await notifyJobCompletion(job.id);
+      await notifyJobCompletion(job.id as string);
     } catch (error) {
       console.error(`Error processing file ${data.filename}:`, error);
       // Notify that the job failed but is completed
-      await notifyJobCompletion(job.id);
+      await notifyJobCompletion(job.id as string);
     }
   },
   {
     concurrency: 100,
     connection: {
       host: "localhost",
-      port: "6379",
+      port: 6379,
     },
   }
 );
