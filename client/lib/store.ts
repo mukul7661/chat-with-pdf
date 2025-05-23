@@ -1,13 +1,11 @@
 import { create } from "zustand";
 
-interface FileState {
+interface FileStore {
   isFileUploaded: boolean;
   setFileUploaded: (status: boolean) => void;
 }
 
-const useFileStore = create<FileState>((set) => ({
+export const useFileStore = create<FileStore>((set) => ({
   isFileUploaded: false,
   setFileUploaded: (status) => set({ isFileUploaded: status }),
 }));
-
-export default useFileStore;

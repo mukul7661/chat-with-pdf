@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import useFileStore from "../store/fileStore";
+import { useFileStore } from "@/lib/store";
 
 interface FileStatus {
   name: string;
@@ -65,7 +65,7 @@ const FileUploadComponent: React.FC<FileUploadProps> = ({ chatId }) => {
         )
       );
 
-      // Update global state to indicate files have been uploaded
+      // Set the file uploaded state to true
       setFileUploaded(true);
 
       console.log(`${files.length} files uploaded successfully`);
@@ -122,13 +122,16 @@ const FileUploadComponent: React.FC<FileUploadProps> = ({ chatId }) => {
   };
 
   const removeFile = (fileName: string) => {
-    const updatedStatuses = fileStatuses.filter((f) => f.name !== fileName);
-    setFileStatuses(updatedStatuses);
+    setFileStatuses((current) => {
+      const updatedFiles = current.filter((f) => f.name !== fileName);
 
-    // If no files remain, update the global state
-    if (updatedStatuses.length === 0) {
-      setFileUploaded(false);
-    }
+      // If there are no files left with success status, update the isFileUploaded state
+      if (!updatedFiles.some((file) => file.status === "success")) {
+        setFileUploaded(false);
+      }
+
+      return updatedFiles;
+    });
   };
 
   return (

@@ -11,6 +11,7 @@ import {
   User,
   Loader2,
   MessageSquare,
+  AlertCircle,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
@@ -22,7 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import useFileStore from "../store/fileStore";
+import { useFileStore } from "@/lib/store";
 
 interface Doc {
   pageContent?: string;
@@ -77,23 +78,22 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
   const handleSendChatMessageStreaming = async () => {
     if (!message.trim() || isStreaming) return;
 
-    setMessages((prev) => [...prev, { role: "user", content: message }]);
-
-    // Check if files have been uploaded
+    // Check if any files have been uploaded
     if (!isFileUploaded) {
+      setMessages((prev) => [...prev, { role: "user", content: message }]);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
           content:
-            "No data has been provided. Please upload PDF files to chat with their content.",
-          isLoading: false,
+            "No data has been provided. Please upload a PDF document first.",
         },
       ]);
       setMessage("");
       return;
     }
 
+    setMessages((prev) => [...prev, { role: "user", content: message }]);
     setMessages((prev) => [
       ...prev,
       { role: "assistant", content: "", isLoading: true },
