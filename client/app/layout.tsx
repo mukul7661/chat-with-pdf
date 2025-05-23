@@ -9,9 +9,9 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import "./globals.css";
-import { ThemeProvider } from "@/app/components/theme-provider";
-import { ThemeToggle } from "@/app/components/theme-toggle";
-import { LandingHero } from "@/app/components/landing-hero";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LandingHero } from "@/components/landing-hero";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

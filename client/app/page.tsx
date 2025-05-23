@@ -1,6 +1,6 @@
 "use client";
-import FileUploadComponent from "./components/file-upload";
-import ChatComponent from "./components/chat";
+import FileUploadComponent from "@/components/file-upload";
+import ChatComponent from "@/components/chat";
 import { useState, useEffect } from "react";
 
 // Utility function to generate a random UUID
