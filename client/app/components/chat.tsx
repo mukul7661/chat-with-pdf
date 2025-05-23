@@ -60,6 +60,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
   const [message, setMessage] = React.useState<string>("");
   const [messages, setMessages] = React.useState<IMessage[]>([]);
   const [isStreaming, setIsStreaming] = React.useState(false);
+  const [hasUploadedFiles, setHasUploadedFiles] = React.useState<
+    boolean | null
+  >(null);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -72,10 +75,48 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
     scrollToBottom();
   }, [messages]);
 
+  // Check if any files have been uploaded for this chat
+  React.useEffect(() => {
+    const checkForUploadedFiles = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8000/chat/has-files?chatId=${encodeURIComponent(
+            chatId
+          )}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setHasUploadedFiles(data.hasFiles);
+        } else {
+          setHasUploadedFiles(false);
+        }
+      } catch (error) {
+        console.error("Error checking for uploaded files:", error);
+        setHasUploadedFiles(false);
+      }
+    };
+
+    checkForUploadedFiles();
+  }, [chatId]);
+
   const handleSendChatMessageStreaming = async () => {
     if (!message.trim() || isStreaming) return;
 
     setMessages((prev) => [...prev, { role: "user", content: message }]);
+
+    // If no files have been uploaded, respond with a message instead of making API call
+    if (hasUploadedFiles === false) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "No data has been provided. Please upload PDF files first.",
+        },
+      ]);
+      setMessage("");
+      return;
+    }
+
     setMessages((prev) => [
       ...prev,
       { role: "assistant", content: "", isLoading: true },

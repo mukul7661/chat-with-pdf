@@ -87,6 +87,61 @@ app.post("/upload/pdfs", upload.array("pdfs", 10), async (req, res) => {
   }
 });
 
+// New endpoint to check if files exist for a chat ID
+app.get("/chat/has-files", async (req, res) => {
+  const chatId = req.query.chatId;
+
+  if (!chatId) {
+    return res.status(400).json({ error: "No chat ID provided" });
+  }
+
+  try {
+    const embeddings = new OpenAIEmbeddings({
+      model: "text-embedding-3-small",
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const vectorStore = await QdrantVectorStore.fromExistingCollection(
+      embeddings,
+      {
+        url: "http://localhost:6333",
+        collectionName: "langchainjs-testing",
+      }
+    );
+
+    // Create a filter to only get documents with the current chatId
+    const filter = {
+      must: [
+        {
+          key: "metadata.chatId",
+          match: {
+            value: chatId,
+          },
+        },
+      ],
+    };
+
+    // We only need to check if any documents exist, so limit to 1
+    const ret = vectorStore.asRetriever({
+      k: 1,
+      filter: filter,
+    });
+
+    // Use a simple query that should match any content
+    const result = await ret.invoke("check");
+
+    // If we found at least one document, files exist for this chat ID
+    const hasFiles = result.length > 0;
+
+    return res.json({ hasFiles });
+  } catch (error) {
+    console.error("Error checking for files:", error);
+    return res
+      .status(500)
+      .json({ error: "Error checking for files", hasFiles: false });
+  }
+});
+
 app.get("/chat", async (req, res) => {
   const userQuery = req.query.message;
   const chatId = req.query.chatId;
