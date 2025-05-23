@@ -380,7 +380,7 @@ const FileUploadComponent: React.FC<FileUploadProps> = ({ chatId }) => {
                         </div>
                       </div>
                     </div>
-                    <Button
+                    {/* <Button
                       variant="ghost"
                       size="sm"
                       className="text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 p-1 h-auto rounded-full"
@@ -390,7 +390,7 @@ const FileUploadComponent: React.FC<FileUploadProps> = ({ chatId }) => {
                       }}
                     >
                       <Trash2 size={16} />
-                    </Button>
+                    </Button> */}
                   </motion.li>
                 ))}
               </ul>
