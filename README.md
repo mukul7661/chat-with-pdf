@@ -4,8 +4,44 @@ This project is a PDF RAG (Retrieval Augmented Generation) system that allows us
 
 ## Architecture
 
-<img width="1277" alt="Screenshot 2025-05-23 at 6 10 20 PM" src="https://github.com/user-attachments/assets/d97d5103-c80e-4b0c-ae61-89e7f632313d" />
+<img width="1277" alt="Screenshot 2025-05-23 at 6 10 20 PM" src="https://github.com/user-attachments/assets/d97d5103-c80e-4b0c-ae61-89e7f632313d" />
 
+## Implementation Approach
+
+### PDF Processing Pipeline
+
+1. **Upload and Queue**: When a PDF is uploaded, it's saved to the server and added to a BullMQ queue with Redis as the backing store.
+2. **Worker Processing**: A separate worker process handles PDF extraction using LangChain's PDFLoader.
+3. **Document Chunking**: Extracted content is split into manageable chunks (1000 characters with 200 character overlap) using CharacterTextSplitter.
+4. **Vector Embedding**: Each text chunk is embedded using OpenAI's text-embedding-3-small model.
+5. **Vector Storage**: Embeddings are stored in Qdrant vector database with metadata including source filename, page numbers, and chatId for retrieval context.
+
+### RAG System Architecture
+
+1. **User Query Processing**: When a user sends a question, the system:
+   - Validates that uploaded files are processed
+   - Passes the query to the backend with the relevant chatId
+2. **Contextual Retrieval**: The system searches Qdrant for relevant document chunks that match the query using:
+   - Semantic similarity via vector embeddings
+   - Filtering by chatId to ensure only relevant documents are considered
+3. **Response Generation**: Retrieved chunks are passed to the OpenAI GPT-4.1 model as context with a system prompt for accurate summarization.
+4. **Streaming Responses**: Responses are streamed back to the client in real-time using Server-Sent Events for better UX.
+5. **Source Attribution**: The system includes metadata about source documents, allowing users to view the exact sources for any information.
+
+### Real-time Status Management
+
+The system implements a status tracking mechanism to:
+
+- Show upload progress
+- Track document processing status
+- Poll for completion status
+- Prevent queries on incompletely processed documents
+
+### Frontend Components
+
+1. **File Upload Component**: Handles file drag-and-drop, upload status, and processing feedback.
+2. **Chat Interface**: Provides markdown rendering, code highlighting, and source reference viewing.
+3. **Responsive Design**: Implemented with TailwindCSS and Framer Motion for smooth animations and transitions.
 
 ## Project Structure
 
