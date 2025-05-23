@@ -352,15 +352,11 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={
-                    isProcessing
-                      ? "Waiting for documents to process..."
-                      : "Type your question here..."
-                  }
+                  placeholder={"Type your question here..."}
                   className={`h-14 text-lg rounded-full pl-4 pr-12 bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 shadow-md focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400 ${
-                    isProcessing ? "opacity-70" : ""
+                    isProcessing ? "opacity-100" : ""
                   }`}
-                  disabled={isStreaming || isProcessing}
+                  // disabled={isStreaming || isProcessing}
                 />
                 <Button
                   onClick={handleSendChatMessageStreaming}
@@ -621,15 +617,11 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={
-                      isProcessing
-                        ? "Waiting for documents to process..."
-                        : "Ask a question about your documents..."
-                    }
+                    placeholder={"Ask a question about your documents..."}
                     className={`rounded-full pl-4 pr-12 py-6 bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 shadow-sm focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400 ${
-                      isProcessing ? "opacity-70" : ""
+                      isProcessing ? "opacity-100" : ""
                     }`}
-                    disabled={isStreaming || isProcessing}
+                    // disabled={isStreaming || isProcessing}
                   />
                   <Button
                     onClick={handleSendChatMessageStreaming}

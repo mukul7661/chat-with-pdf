@@ -7,7 +7,7 @@ import {
   completeJob,
 } from "../controllers/fileController.js";
 
-const router = Router();
+const router: Router = Router();
 
 // File upload routes
 router.post("/upload/pdf", upload.single("pdf"), uploadSingleFile);

@@ -9,6 +9,8 @@ const nextConfig = {
   experimental: {
     appDir: true,
   },
+  devIndicators: false,
+  poweredByHeader: false,
 };
 
 export default nextConfig;

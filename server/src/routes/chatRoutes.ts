@@ -4,7 +4,7 @@ import {
   handleChatStream,
 } from "../controllers/chatController.js";
 
-const router = Router();
+const router: Router = Router();
 
 // Chat routes
 router.get("/chat", handleChatQuery);

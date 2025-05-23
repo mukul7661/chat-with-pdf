@@ -72,7 +72,6 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
           </div>
         </div>
       </div>
-
       {/* Message container */}
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {messages.length === 0 ? (
@@ -239,7 +238,6 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
         )}
         <div ref={messagesEndRef} />
       </div>
-
       {/* Input area */}
       <div className="border-t dark:border-gray-800 bg-white dark:bg-gray-800 p-4">
         <div className="flex rounded-lg border dark:border-gray-700 focus-within:border-indigo-500 dark:focus-within:border-indigo-500 transition-colors overflow-hidden">
@@ -250,7 +248,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
             onKeyDown={handleKeyDown}
             placeholder="Ask a question about your uploaded documents..."
             className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-            disabled={isStreaming}
+            // disabled={isStreaming}
           />
           <Button
             onClick={handleSendMessage}
