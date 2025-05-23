@@ -2,6 +2,11 @@
 
 This project is a PDF RAG (Retrieval Augmented Generation) system that allows users to upload PDF documents and chat with them using AI. The system processes PDFs, extracts their content, and allows users to ask questions that are answered based on the content of the uploaded documents.
 
+## Architecture
+
+<img width="1277" alt="Screenshot 2025-05-23 at 6 10 20 PM" src="https://github.com/user-attachments/assets/d97d5103-c80e-4b0c-ae61-89e7f632313d" />
+
+
 ## Project Structure
 
 The project is organized into two main parts:
@@ -74,11 +79,11 @@ CLERK_SECRET_KEY=your_clerk_secret_key
 ```bash
 # Server
 cd server
-npm install
+pnpm install
 
 # Client
 cd client
-npm install
+pnpm install
 ```
 
 ### Run the Application
@@ -89,15 +94,15 @@ docker-compose up -d
 
 # Start the server
 cd server
-npm run dev
+pnpm run dev
 
 # Start the worker in a separate terminal
 cd server
-npm run worker
+pnpm run dev:worker
 
 # Start the client
 cd client
-npm run dev
+pnpm run dev
 ```
 
 Visit `http://localhost:3000` to access the application.
