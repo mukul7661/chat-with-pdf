@@ -11,6 +11,7 @@ import {
 import "./globals.css";
 import { ThemeProvider } from "@/app/components/theme-provider";
 import { ThemeToggle } from "@/app/components/theme-toggle";
+import { LandingHero } from "@/app/components/landing-hero";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,6 +26,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "PDF Insights - AI-powered Document Analysis",
   description: "Chat with your PDFs using advanced AI technology",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -47,8 +51,8 @@ export default function RootLayout({
             <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
               <ThemeToggle />
               <SignedOut>
-                <div className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-md overflow-hidden">
-                  <SignUpButton />
+                <div className="w-fit rounded-full bg-indigo-600 px-3 py-1.5 text-white text-sm font-medium shadow-lg hover:bg-indigo-700 transition-colors">
+                  <SignUpButton mode="modal" />
                 </div>
               </SignedOut>
               <SignedIn>
@@ -56,6 +60,9 @@ export default function RootLayout({
               </SignedIn>
             </div>
             <SignedIn>{children}</SignedIn>
+            <SignedOut>
+              <LandingHero />
+            </SignedOut>
           </ThemeProvider>
         </body>
       </html>
