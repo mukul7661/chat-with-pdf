@@ -1,0 +1,113 @@
+# PDF RAG System
+
+This project is a PDF RAG (Retrieval Augmented Generation) system that allows users to upload PDF documents and chat with them using AI. The system processes PDFs, extracts their content, and allows users to ask questions that are answered based on the content of the uploaded documents.
+
+## Project Structure
+
+The project is organized into two main parts:
+
+### Server
+
+- `server/src/config`: Configuration files, environment variables
+- `server/src/models`: Data models and type definitions
+- `server/src/services`: Service layer for business logic
+- `server/src/controllers`: Controller layer for handling HTTP requests
+- `server/src/routes`: API routes for the application
+- `server/src/middleware`: Express middleware
+- `server/src/worker`: PDF processing worker using BullMQ
+- `server/src/utils`: Utility functions
+
+### Client
+
+- `client/src/app`: Next.js app directory with pages and layout
+- `client/src/components`: React components
+- `client/src/hooks`: Custom React hooks
+- `client/src/lib`: Library code and utilities
+- `client/src/types`: TypeScript type definitions
+- `client/src/utils`: Utility functions
+- `client/src/constants`: Application constants
+- `client/src/styles`: CSS styles
+- `client/src/services`: Service layer for API calls
+- `client/src/store`: Global state management
+
+## Technologies Used
+
+- **Backend**: Node.js, Express, BullMQ, LangChain, OpenAI, Qdrant
+- **Frontend**: Next.js, React, TailwindCSS, Zustand, Framer Motion
+- **Database**: Redis (for queue), Qdrant (vector database)
+- **Other**: TypeScript, Server-Sent Events (SSE)
+
+## Setup Instructions
+
+### Prerequisites
+
+- Node.js (v18+)
+- Redis
+- Qdrant
+
+### Environment Variables
+
+Create `.env` files in both server and client directories based on the example files.
+
+#### Server
+
+```
+PORT=8000
+REDIS_HOST=localhost
+REDIS_PORT=6379
+OPENAI_API_KEY=your_openai_api_key
+QDRANT_URL=http://localhost:6333
+QDRANT_COLLECTION=langchainjs-testing
+UPLOAD_DIR=uploads/
+```
+
+#### Client
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+```
+
+### Install Dependencies
+
+```bash
+# Server
+cd server
+npm install
+
+# Client
+cd client
+npm install
+```
+
+### Run the Application
+
+```bash
+# Start Redis and Qdrant (using Docker)
+docker-compose up -d
+
+# Start the server
+cd server
+npm run dev
+
+# Start the worker in a separate terminal
+cd server
+npm run worker
+
+# Start the client
+cd client
+npm run dev
+```
+
+Visit `http://localhost:3000` to access the application.
+
+## Features
+
+- Upload PDF documents
+- Process and index PDF content
+- Chat with AI about document content
+- View source references from documents
+- Stream AI responses for better UX
+- Multiple file upload support
+- Dark mode support

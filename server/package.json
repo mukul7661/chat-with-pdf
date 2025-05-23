@@ -1,40 +1,45 @@
 {
-  "name": "server",
+  "name": "pdf-rag-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "dist/index.js",
+  "description": "Server for PDF RAG system",
   "type": "module",
+  "main": "dist/server.js",
   "scripts": {
-    "dev": "tsc --watch & node --watch dist/index.js",
-    "dev:worker": "tsc --watch & node --watch dist/worker.js",
     "build": "tsc",
-    "start": "node dist/index.js",
-    "start:worker": "node dist/worker.js"
+    "start": "node dist/server.js",
+    "worker": "node dist/worker-runner.js",
+    "dev": "nodemon --exec tsx src/server.ts",
+    "dev:worker": "nodemon --exec tsx src/worker-runner.ts",
+    "test": "jest"
   },
-  "keywords": [],
+  "keywords": [
+    "pdf",
+    "rag",
+    "openai",
+    "chatbot",
+    "express"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
-    "@langchain/community": "^0.3.40",
-    "@langchain/core": "^0.3.44",
-    "@langchain/openai": "^0.5.5",
-    "@langchain/qdrant": "^0.1.2",
-    "@langchain/textsplitters": "^0.1.0",
-    "bullmq": "^5.49.0",
+    "@langchain/community": "^0.0.32",
+    "@langchain/core": "^0.1.17",
+    "@langchain/openai": "^0.0.12",
+    "@langchain/qdrant": "^0.0.6",
+    "@langchain/textsplitters": "^0.0.3",
+    "bullmq": "^4.14.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
-    "express": "4.x",
-    "langchain": "^0.3.21",
-    "multer": "1.4.5-lts.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "node-fetch": "^3.3.2",
-    "openai": "^4.94.0",
-    "pdf-parse": "^1.1.1"
+    "openai": "^4.25.0"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "4.x",
-    "@types/multer": "^1.4.12",
-    "@types/node": "^22.14.1",
-    "typescript": "^5.4.2"
+    "@types/cors": "^2.8.15",
+    "@types/express": "^4.17.20",
+    "@types/node": "^20.8.7",
+    "nodemon": "^3.0.1",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3"
   }
 }
