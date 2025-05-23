@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# dist
+dist/
+
 # uploads
 uploads/*
 
