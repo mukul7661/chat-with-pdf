@@ -526,7 +526,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
                                   return (
                                     <Dialog key={i}>
                                       <DialogTrigger asChild>
-                                        <div className="bg-white/90 dark:bg-slate-700/50 rounded-lg p-2 text-xs cursor-pointer hover:bg-white dark:hover:bg-slate-700 transition-colors border border-slate-200/50 dark:border-slate-600/50">
+                                        <div className="bg-white/90 dark:bg-slate-800/50 rounded-lg p-2 text-xs cursor-pointer hover:bg-white dark:hover:bg-slate-800 transition-colors border border-slate-200/50 dark:border-slate-700/50 shadow-sm dark:shadow-slate-900/20">
                                           <div className="flex items-center text-slate-700 dark:text-slate-300 mb-1">
                                             <File
                                               size={12}
@@ -547,14 +547,14 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
                                           </p>
                                         </div>
                                       </DialogTrigger>
-                                      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                                      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-white dark:bg-slate-900 dark:border-slate-700 dark:border-opacity-60 dark:shadow-lg dark:shadow-slate-900/30">
                                         <DialogHeader>
                                           <DialogTitle className="flex items-center gap-2">
                                             <File
                                               size={16}
-                                              className="text-indigo-600"
+                                              className="text-indigo-600 dark:text-indigo-400"
                                             />
-                                            <span>
+                                            <span className="text-slate-900 dark:text-slate-100">
                                               {doc.metadata?.originalFilename ||
                                                 doc.metadata?.source
                                                   ?.split("/")
@@ -565,7 +565,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
                                             </span>
                                           </DialogTitle>
                                         </DialogHeader>
-                                        <div className="mt-4 px-3 py-5 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                                        <div className="mt-4 px-3 py-5 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 dark:border-opacity-50">
                                           <div className="prose prose-slate dark:prose-invert max-w-none text-sm leading-relaxed">
                                             {highlightRelevantText(
                                               doc.pageContent || "",
@@ -577,7 +577,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ chatId }) => {
                                                   key={idx}
                                                   className={`mb-3 ${
                                                     paragraph.isHighlighted
-                                                      ? "bg-yellow-100/80 dark:bg-yellow-900/20 px-2 py-1 border-l-4 border-yellow-500 dark:border-yellow-600 rounded"
+                                                      ? "bg-yellow-100/80 dark:bg-yellow-800/20 px-2 py-1 border-l-4 border-yellow-500 dark:border-yellow-500 rounded"
                                                       : ""
                                                   }`}
                                                 >
